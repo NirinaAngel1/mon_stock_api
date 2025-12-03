@@ -13,7 +13,6 @@ use App\Repository\UserRepository;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
-use PhpParser\Node\Stmt\TryCatch;
 
 #[Route('/api/users')]
 #[IsGranted('ROLE_ADMIN', message:'Accès réservé aux administrateurs.')]

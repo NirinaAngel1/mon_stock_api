@@ -37,12 +37,12 @@ class Product
     #[Assert\PositiveOrZero(message: "Le prix ne peut pas être négatif.")]
     private ?float $price = null;
 
-    #[ORM\Column]
-    #[Groups(['product:read', 'product:write', 'category:read_products'])]
-    #[Assert\NotBlank(message: "La quantité est obligatoire.")] // Contrainte ajoutée
-    #[Assert\Type(type: 'integer', message: "La quantité doit être un nombre entier.")]
-    #[Assert\PositiveOrZero(message: "La quantité en stock ne peut pas être négative.")]
-    private ?int $quantity = null;
+    // #[ORM\Column]
+    // // #[Groups(['product:read', 'product:write', 'category:read_products'])]
+    // // #[Assert\NotBlank(message: "La quantité est obligatoire.")] // Contrainte ajoutée
+    // // #[Assert\Type(type: 'integer', message: "La quantité doit être un nombre entier.")]
+    // // #[Assert\PositiveOrZero(message: "La quantité en stock ne peut pas être négative.")]
+    // private ?int $quantity = null;
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
@@ -53,6 +53,7 @@ class Product
      * @var Collection<int, StockMovement>
      */
     #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'product')]
+    #[Groups(['product:read:item'])]
     private Collection $stockMovements;
 
     /**
@@ -60,6 +61,9 @@ class Product
      */
     #[ORM\OneToMany(targetEntity: OrderLine::class, mappedBy: 'product_id')]
     private Collection $orderLines;
+
+    #[Groups(['product:read', 'category:read_products'])]
+    private ?int $currentStock = null;
 
     public function __construct()
     {
@@ -108,17 +112,17 @@ class Product
         return $this;
     }
 
-    public function getQuantity(): ?int
-    {
-        return $this->quantity;
-    }
+    // public function getQuantity(): ?int
+    // {
+    //     return $this->quantity;
+    // }
 
-    public function setQuantity(int $quantity): static
-    {
-        $this->quantity = $quantity;
+    // public function setQuantity(int $quantity): static
+    // {
+    //     $this->quantity = $quantity;
 
-        return $this;
-    }
+    //     return $this;
+    // }
 
     public function getCategory(): ?Category
     {
@@ -188,6 +192,18 @@ class Product
                 $orderLine->setProductId(null);
             }
         }
+
+        return $this;
+    }
+
+    public function getCurrentStock(): ?int
+    {
+        return $this->currentStock;
+    }
+
+    public function setCurrentStock(?int $currentStock): self
+    {
+        $this->currentStock = $currentStock;
 
         return $this;
     }

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Product;
+use App\Enum\StockMovementType;
 use App\Repository\ProductRepository;
 use App\Repository\CategoryRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,7 +16,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use OpenApi\Annotations as OA;
-use Nelmio\ApiDocBundle\Annotation\Security;
+use App\Service\StockService;
+
 
 #[Route('/api/products')]
 class ProductController extends AbstractController
@@ -52,9 +54,20 @@ class ProductController extends AbstractController
      * )
      */
 
+    public function __construct(
+        private readonly StockService $stockService,
+        private readonly ProductRepository $productRepository,
+        private readonly SerializerInterface $serializer
+    )
+    {}
+
     #[Route('', name: 'product_index', methods: ['GET'])]
     #[IsGranted('ROLE_USER')]
-    public function index(Request $request, ProductRepository $productRepository, SerializerInterface $serializer): JsonResponse
+    public function index(
+        Request $request,
+        ProductRepository $productRepository,
+        SerializerInterface $serializer
+        ): JsonResponse
     {
         $page = $request->query->getInt('page', 1);
         $limit = $request->query->getInt('limit', 10);
@@ -72,6 +85,12 @@ class ProductController extends AbstractController
         if (is_numeric($maxPrice)) $filters['maxPrice'] = $maxPrice;
 
         $products = $productRepository->findProductsByCriteria($page, $limit, $filters);
+
+        foreach ($products as $product) {
+            $currentStock = $this->stockService->getCurrentStock($product);
+            $product->setCurrentStock($currentStock);
+        }
+
         $totalItems = $productRepository->countProductsByCriteria($filters);
         $totalPages = ceil($totalItems / $limit);
 
@@ -93,7 +112,13 @@ class ProductController extends AbstractController
 
     #[Route('', name: 'product_create', methods: ['POST'])]
     #[IsGranted('ROLE_STAFF')]
-    public function create(Request $request, EntityManagerInterface $entityManager, SerializerInterface $serializer, CategoryRepository $categoryRepository, ValidatorInterface $validator): JsonResponse
+    public function create(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        SerializerInterface $serializer,
+        CategoryRepository $categoryRepository,
+        ValidatorInterface $validator,
+        ): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -107,9 +132,9 @@ class ProductController extends AbstractController
             return new JsonResponse(['message' => 'L\'ID de la catégorie est obligatoire.'], Response::HTTP_BAD_REQUEST);
         }
 
-        $category = $categoryRepository->find($data['category']);
+        $category = $categoryRepository->find($data['category'] ?? null);
         if (!$category) {
-            return new JsonResponse(['message'=>'Catégorie non trouvée pour l\'ID : ' . $data['category']], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message'=>'Catégorie non trouvée pour l\'ID : ' . $data['category'] ?? 'N/A'], Response::HTTP_BAD_REQUEST);
         }
 
         $product->setCategory($category);
@@ -126,6 +151,28 @@ class ProductController extends AbstractController
         $entityManager->persist($product);
         $entityManager->flush();
 
+        if(isset($data['initial_stock']) && $data['initial_stock']>0 ){
+            $initialQuantity = (int) $data['initial_stock'];
+
+            $user = $this->getUser();
+            if(!$user){
+                return new JsonResponse(['message' => 'Utilisateur non authentifié.'], Response::HTTP_UNAUTHORIZED);
+            }
+
+            try{
+                $this->stockService->createAdjustmentMovement(
+                    $product, 
+                    $initialQuantity,
+                    StockMovementType::IN,
+                    'Stock initial à la création du produit',
+                    $user);
+            } catch (\Exception $e) {
+                return new JsonResponse(['message' => 'Erreur lors de l\'ajout du stock initial : ' . $e->getMessage()], Response::HTTP_INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        $product->setCurrentStock($this->stockService->getCurrentStock($product));
+
         $json = $serializer->serialize($product, 'json', ['groups' => 'product:read']);
         return new JsonResponse($json, Response::HTTP_CREATED, [], true);
     }
@@ -134,20 +181,27 @@ class ProductController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function show(Product $product, SerializerInterface $serializer): JsonResponse
     {
-        $data = $serializer->serialize($product, 'json', ['groups' => 'product:read']);
+        $stock = $this->stockService->getCurrentStock($product);
+        $product->setCurrentStock($stock);
+
+        $data = $serializer->serialize($product, 'json', ['groups' => 'product:read:item']);
         return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
     #[Route('/{id}', name: 'product_update', methods: ['PUT'])]
     #[IsGranted('ROLE_STAFF')]
-    public function update(Request $request, Product $product, CategoryRepository $categoryRepository, EntityManagerInterface $entityManager, ValidatorInterface $validator): JsonResponse
+    public function update(
+        Request $request,
+        Product $product,
+        CategoryRepository $categoryRepository,
+        EntityManagerInterface $entityManager,
+        ValidatorInterface $validator): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
         $errors = [];
 
         if (isset($data['name'])) $product->setName($data['name']);
         if (isset($data['price'])) $product->setPrice($data['price']);
-        if (isset($data['quantity'])) $product->setQuantity($data['quantity']);
         if (isset($data['description'])) $product->setDescription($data['description']);
 
         if (isset($data['category'])) {

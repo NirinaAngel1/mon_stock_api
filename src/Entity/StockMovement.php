@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\StockMovementRepository;
 use Doctrine\ORM\Mapping as ORM;
 use App\Enum\StockMovementType;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: StockMovementRepository::class)]
 class StockMovement
@@ -12,6 +13,7 @@ class StockMovement
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['read:product:item'])]
     private ?int $id = null;
   
     #[ORM\Column]
@@ -25,6 +27,7 @@ class StockMovement
 
     #[ORM\ManyToOne(inversedBy: 'stockMovements')]
     #[ORM\JoinColumn(nullable: false)]
+    #[Groups(['read:product:item'])]
     private ?Product $product = null;
 
     #[ORM\ManyToOne(inversedBy: 'stockMovements')]
@@ -34,7 +37,14 @@ class StockMovement
     private ?OrderLine $orderLine = null;
 
     #[ORM\Column(type:'string', enumType: StockMovementType::class)]
+    #[Groups(['read:product:item'])]
     private StockMovementType $type;
+
+    #[Groups(['read:product:item'])]
+    public function getTypeValue(): string
+    {
+        return $this->type->value;
+    }
 
     public function getId(): ?int
     {

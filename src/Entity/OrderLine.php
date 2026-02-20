@@ -7,6 +7,7 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: OrderLineRepository::class)]
 class OrderLine
@@ -14,18 +15,23 @@ class OrderLine
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?int $quantity = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 0)]
+    #[Groups(['order:read'])]
     private ?string $unitPrice = null;
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
     private ?Order $order_id = null;
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
+    #[Groups(['order:read'])]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Product $product_id = null;
 
     /**
@@ -68,24 +74,24 @@ class OrderLine
         return $this;
     }
 
-    public function getOrderId(): ?Order
+    public function getOrder(): ?Order
     {
         return $this->order_id;
     }
 
-    public function setOrderId(?Order $order_id): static
+    public function setOrder(?Order $order_id): static
     {
         $this->order_id = $order_id;
 
         return $this;
     }
 
-    public function getProductId(): ?Product
+    public function getProduct(): ?Product
     {
         return $this->product_id;
     }
 
-    public function setProductId(?Product $product_id): static
+    public function setProduct(?Product $product_id): static
     {
         $this->product_id = $product_id;
 

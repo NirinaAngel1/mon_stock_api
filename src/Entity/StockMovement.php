@@ -13,13 +13,15 @@ class StockMovement
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['read:product:item'])]
+    #[Groups(['read:product:item', 'stock:read'])]
     private ?int $id = null;
   
     #[ORM\Column]
+    #[Groups(['stock:read'])]
     private ?int $quantity = null;
 
     #[ORM\Column]
+    #[Groups(['stock:read'])]
     private ?\DateTimeImmutable $date = null;
 
     #[ORM\Column(length: 255)]
@@ -27,17 +29,19 @@ class StockMovement
 
     #[ORM\ManyToOne(inversedBy: 'stockMovements')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['read:product:item'])]
+    #[Groups(['read:product:item', 'stock:read'])]
     private ?Product $product = null;
 
-    #[ORM\ManyToOne(inversedBy: 'stockMovements')]
-    private ?User $user_id = null;
+    #[ORM\ManyToOne(targetEntity:User::class, inversedBy: 'stockMovements')]
+    #[ORM\JoinColumn(name:'user_id', referencedColumnName:'id', nullable:true, onDelete:'SET NULL')]
+    #[Groups(['stock:read'])]
+    private ?User $user = null;
 
     #[ORM\ManyToOne(inversedBy: 'stockmvt')]
     private ?OrderLine $orderLine = null;
 
     #[ORM\Column(type:'string', enumType: StockMovementType::class)]
-    #[Groups(['read:product:item'])]
+    #[Groups(['read:product:item','stock:read'])]
     private StockMovementType $type;
 
     #[Groups(['read:product:item'])]
@@ -111,14 +115,14 @@ class StockMovement
         return $this;
     }
 
-    public function getUserId(): ?User
+    public function getUser(): ?User
     {
-        return $this->user_id;
+        return $this->user;
     }
 
-    public function setUserId(?User $user_id): static
+    public function setUser(?User $user): static
     {
-        $this->user_id = $user_id;
+        $this->user = $user;
 
         return $this;
     }

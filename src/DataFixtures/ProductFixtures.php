@@ -19,9 +19,6 @@ class ProductFixtures extends Fixture implements DependentFixtureInterface
             $product = new Product();
             $product->setName("Produit de test n°" . ($i + 1));
             $product->setPrice(mt_rand(100, 1500000) / 100);
-            $product->setQuantity(mt_rand(10, 150));
-
-            // associe une catégorie au hasard
             $randomCategory = $categories[array_rand($categories)];
             $product->setCategory($randomCategory);
 

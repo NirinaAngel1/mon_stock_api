@@ -11,7 +11,7 @@ class LoginSubscriber implements EventSubscriberInterface
     {
         $data = $event->getData();
 
-        /** @var \APP\Entity\User $user */
+        /** @var \App\Entity\User $user */
         $user = $event->getUser();
 
         if(!$user){
@@ -23,7 +23,6 @@ class LoginSubscriber implements EventSubscriberInterface
             'email'=> $user->getEmail(),
             'roles'=> $user->getRoles(),
             'lastLogin'=> (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
-
         ];
 
         $event->setData($data);

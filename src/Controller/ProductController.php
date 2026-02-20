@@ -6,6 +6,7 @@ use App\Entity\Product;
 use App\Enum\StockMovementType;
 use App\Repository\ProductRepository;
 use App\Repository\CategoryRepository;
+use App\Repository\StockMovementRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -110,6 +111,33 @@ class ProductController extends AbstractController
         return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
+    #[Route('/stocks', name:'product_all_stock', methods:['GET'])]
+    #[IsGranted('ROLE_STAFF')]
+    public function getWithStock(ProductRepository $productRepository):JsonResponse
+    {
+
+        $data = $productRepository->findAllWithStock();
+
+        return new JsonResponse([$data]);
+    }
+
+    #[Route('/out-of-stock', name:'product_out_of_stock', methods:['GET'])]
+    #[IsGranted('ROLE_STAFF')]
+    public function getOutOfStock(ProductRepository $productRepository):JsonResponse
+    {
+        $data = $productRepository->findOutOfStock();
+
+        return new JsonResponse([$data, 'Nombres'=>count($data)]);
+    }
+
+    #[Route('/low-stock', name:'product_low_stock', methods:['GET'])]
+    #[IsGranted('ROLE_STAFF')]
+    public function getLowStock(ProductRepository $productRepository):JsonResponse
+    {
+        $data = $productRepository->findLowStock();
+        return new JsonResponse([$data, 'Nombres'=>count($data)]);
+    }
+
     #[Route('', name: 'product_create', methods: ['POST'])]
     #[IsGranted('ROLE_STAFF')]
     public function create(
@@ -184,8 +212,11 @@ class ProductController extends AbstractController
         $stock = $this->stockService->getCurrentStock($product);
         $product->setCurrentStock($stock);
 
-        $data = $serializer->serialize($product, 'json', ['groups' => 'product:read:item']);
-        return new JsonResponse($data, Response::HTTP_OK, [], true);
+        // $data = $serializer->serialize($product, 'json', ['groups' => 'product:read:item']);
+        return $this->json($product, Response::HTTP_OK,[], ['groups' => 'product:read:item']);
+        // dump($data);
+        // die();
+        // return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
     #[Route('/{id}', name: 'product_update', methods: ['PUT'])]
@@ -233,5 +264,17 @@ class ProductController extends AbstractController
         $entityManager->remove($product);
         $entityManager->flush();
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
+    }
+
+    #[Route('/{id}/stock-history', name:'product_stock_history')]
+    #[IsGranted('ROLE_STAFF')]
+    public function getProductStockHistory(
+        Product $product,
+        StockMovementRepository $movementRepository
+    ):JsonResponse
+    {
+        $movements = $movementRepository->findBy(['product'=>$product],['date'=>'DESC']);
+
+        return $this->json($movements, Response::HTTP_OK, [], ['groups'=>'stock:read']);
     }
 }

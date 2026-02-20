@@ -19,7 +19,7 @@ class Category
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['category:read','product:read', 'category:read_products'])]
+    #[Groups(['category:read','product:read', 'category:read_products', 'product:read:item'])]
     #[Assert\NotBlank(message:'Le champ nom catégorie est obligatoire')]
     private ?string $name = null;
 

@@ -18,15 +18,65 @@ class StockMovementRepository extends ServiceEntityRepository
         parent::__construct($registry, StockMovement::class);
     }
 
-    public function calculateStockForProduct(Product $product):int
+    public function findByProduct(Product $product, int $limit = 20):array
     {
         $qb = $this->createQueryBuilder('sm')
-            ->select('SUM (CASE
-                WHEN sm.type = :inType THEN sm.quantity
-                WHEN sm.type = :outType THEN -sm.quantity
-                WHEN sm.type = :adjType AND sm.quantity >= 0 THEN sm.quantity
-                ELSE -sm.quantity
-            END) AS current_stock')
+            ->where('sm.product = :product')
+            ->setParameter('product', $product)
+            ->orderBy('sm.date', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery();
+
+            return $qb->getResult();
+    }
+
+    public function findLastMovements(Product $product, int $limit = 20):array
+    {
+        $qb = $this->createQueryBuilder('sm')
+            ->leftJoin('sm.product', 'p')
+            ->addSelect('p')
+            ->leftJoin('sm.user','u')
+            ->addSelect('u')
+            ->where('sm.product = :product')
+            ->setParameter('product', $product)
+            ->orderBy('sm.date','DESC')
+            ->setMaxResults($limit)
+            ->getQuery();
+
+            return $qb->getResult();
+    }
+
+    public function findLastMovementGlobal(int $limit = 10):array
+    {
+        $qb = $this->createQueryBuilder('sm')
+            ->leftJoin('sm.product', 'p')
+            ->addSelect('p')
+            ->leftJoin('sm.user','u')
+            ->addSelect('u')
+            ->orderBy('sm.date','DESC')
+            ->setMaxResults($limit)
+            ->getQuery();
+
+            return $qb->getResult();
+    }
+
+    public function getStockExpression(string $alias ='sm'):string
+    {
+        return "COALESCE(SUM(
+                    CASE 
+                        WHEN $alias.type = :inType THEN $alias.quantity
+                        WHEN $alias.type = :outType THEN -$alias.quantity
+                        WHEN $alias.type = :adjType THEN $alias.quantity
+                        ELSE 0
+                    END
+                ), 0)";
+    }
+
+    public function calculateStockForProduct(Product $product):int
+    {
+        $strExpr = $this->getStockExpression();
+        $qb = $this->createQueryBuilder('sm')
+            ->select("$strExpr AS current_stock")
             ->where('sm.product = :product')
             ->setParameter('product', $product)
             ->setParameter('inType', StockMovementType::IN)

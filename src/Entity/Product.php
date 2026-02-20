@@ -11,27 +11,27 @@ use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 
-#[ORM\Entity(repositoryClass: ProductRepository::class)]
+#[ORM\Entity(repositoryClass:ProductRepository::class)]
 class Product
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
-    #[Groups(['product:read', 'category:read_products'])]
+    #[Groups(['product:read', 'category:read_products', 'product:read:item', 'order:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Groups(['product:read', 'product:write', 'category:read_products'])]
+    #[Groups(['product:read', 'product:write', 'category:read_products', 'stock:read', 'order:read', 'product:read:item'])]
     #[Assert\NotBlank(message:'champs nom de produit obligatoire.')]
     #[Assert\Length(min:3,max:255, minMessage:'Le nom doit contenir 3 caractères minimum', maxMessage:'Nom de produit trop long')]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
-    #[Groups(['product:read', 'product:write','category:read_products'])]
+    #[Groups(['product:read', 'product:write','category:read_products', 'product:read:item'])]
     private ?string $description = null;
 
     #[ORM\Column]
-    #[Groups(['product:read', 'product:write', 'category:read_products'])]
+    #[Groups(['product:read', 'product:write', 'category:read_products', 'product:read:item'])]
     #[Assert\NotBlank(message: "Le prix est obligatoire.")] // Contrainte ajoutée
     #[Assert\Type(type: 'numeric', message: "Le prix doit être un nombre.")]
     #[Assert\PositiveOrZero(message: "Le prix ne peut pas être négatif.")]
@@ -46,7 +46,7 @@ class Product
 
     #[ORM\ManyToOne(inversedBy: 'products')]
     #[ORM\JoinColumn(nullable: false)]
-    #[Groups(['product:read', 'category:read'])]
+    #[Groups(['product:read', 'category:read', 'product:read:item'])]
     private ?Category $category = null;
 
     /**
@@ -64,6 +64,9 @@ class Product
 
     #[Groups(['product:read', 'category:read_products'])]
     private ?int $currentStock = null;
+
+    #[ORM\Column(type:'integer')]
+    private int $lowStockThreshold = 5;
 
     public function __construct()
     {
@@ -109,6 +112,17 @@ class Product
     {
         $this->price = $price;
 
+        return $this;
+    }
+
+    public function getLowStockThreshold():int
+    {
+        return $this->lowStockThreshold;
+    }
+
+    public function setLowStockThreshold(int $lowStockThreshold):self
+    {
+        $this->lowStockThreshold = $lowStockThreshold;
         return $this;
     }
 
@@ -178,7 +192,7 @@ class Product
     {
         if (!$this->orderLines->contains($orderLine)) {
             $this->orderLines->add($orderLine);
-            $orderLine->setProductId($this);
+            $orderLine->setProduct($this);
         }
 
         return $this;
@@ -188,8 +202,8 @@ class Product
     {
         if ($this->orderLines->removeElement($orderLine)) {
             // set the owning side to null (unless already changed)
-            if ($orderLine->getProductId() === $this) {
-                $orderLine->setProductId(null);
+            if ($orderLine->getProduct() === $this) {
+                $orderLine->setProduct(null);
             }
         }
 

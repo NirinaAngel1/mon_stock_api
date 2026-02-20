@@ -9,6 +9,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use App\Enum\OrderStatus;
 use App\Enum\OrderType;
+use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: OrderRepository::class)]
 #[ORM\Table(name: '`order`')]
@@ -17,24 +18,31 @@ class Order
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Groups(['order:read'])]
     private ?string $reference = null;
 
     #[ORM\Column]
+    #[Groups(['order:read'])]
     private ?\DateTimeImmutable $date = null;
 
     #[ORM\Column(type: 'string', enumType: OrderType::class)]
+    #[Groups(['order:read'])]
     private OrderType $type;
 
     #[ORM\Column(type: 'string', enumType: OrderStatus::class)]
+    #[Groups(['order:read'])]
     private OrderStatus $status;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 10, scale: 0)]
+    #[Groups(['order:read'])]
     private ?string $totalAmount = null;
 
     #[ORM\ManyToOne(inversedBy: 'orders')]
+    // #[Groups(['order:read'])]
     private ?User $user_id = null;
 
     #[ORM\ManyToOne(inversedBy: 'order_id')]
@@ -47,6 +55,7 @@ class Order
      * @var Collection<int, OrderLine>
      */
     #[ORM\OneToMany(targetEntity: OrderLine::class, mappedBy: 'order_id')]
+    #[Groups(['order:read'])]
     private Collection $orderLines;
 
     public function __construct()
@@ -167,7 +176,7 @@ class Order
     {
         if (!$this->orderLines->contains($orderLine)) {
             $this->orderLines->add($orderLine);
-            $orderLine->setOrderId($this);
+            $orderLine->setOrder($this);
         }
 
         return $this;
@@ -177,8 +186,8 @@ class Order
     {
         if ($this->orderLines->removeElement($orderLine)) {
             // set the owning side to null (unless already changed)
-            if ($orderLine->getOrderId() === $this) {
-                $orderLine->setOrderId(null);
+            if ($orderLine->getOrder() === $this) {
+                $orderLine->setOrder(null);
             }
         }
 

@@ -21,18 +21,19 @@ class EventSubscriber implements EventSubscriberInterface
     {
         $exception = $event->getThrowable();
 
-        // $statusCode = $exception instanceof HttpExceptionInterface
-        // ? $exception->getStatusCode()
-        // : 500;
+        $path = $event->getRequest()->getPathInfo();
 
-        $statusCode = 500;
+        if(!str_starts_with($path, '/api')){
+                return;
+            }
+
+        $statusCode = $exception instanceof HttpExceptionInterface
+        ? $exception->getStatusCode()
+        : 500;
+
         $message = "Une erreur de serveur est survenue.";
 
         if($exception instanceof NotFoundHttpException){
-            $statusCode = 404;
-
-            $path = $event->getRequest()->getPathInfo();
-
             if(str_contains($path, '/api/categories')){
                 $message = "Catégorie inexistante.";
             }else if(str_contains($path, '/api/products')){
@@ -45,7 +46,7 @@ class EventSubscriber implements EventSubscriberInterface
         $response = new JsonResponse([
             'status'=>'error',
             'code'=>$statusCode,
-            'message'=>$exception->getMessage(),
+            'message'=>$message,
         ], $statusCode);
 
         $event->setResponse($response);

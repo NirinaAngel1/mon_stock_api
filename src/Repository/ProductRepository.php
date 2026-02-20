@@ -3,6 +3,8 @@
 namespace App\Repository;
 
 use App\Entity\Product;
+use App\Entity\StockMovement;
+use App\Enum\StockMovementType;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
@@ -45,20 +47,20 @@ class ProductRepository extends ServiceEntityRepository
 
         // application des filtres
         
-        $this->applyFilters($qb, $filters, false);
+        $this->applyFilters($qb, $filters);
         
         return (int) $qb->getQuery()->getSingleScalarResult();
     }
 
     // fonction applyFilters
-    
-    private function applyFilters(QueryBuilder $qb, array $filters, bool $isJoinDone = false): void
+    private function applyFilters(QueryBuilder $qb, array $filters): void
     {
         // filtre par catégorie
         if(!empty($filters['categoryId'])){
-            if(!$isJoinDone){
-                $qb->leftJoin('p.category','c', true);
+            if(!in_array('c', $qb->getAllAliases(), true)){
+            $qb->leftJoin('p.category','c');
             }
+
             $qb->andWhere('c.id = :categoryId')
                 ->setParameter('categoryId', $filters['categoryId']);
         }
@@ -69,50 +71,110 @@ class ProductRepository extends ServiceEntityRepository
                     ->setParameter('productName', '%' . $filters['name'] . '%');
             }
 
-            // filtre pour un champ de recherche
+            // filtre pour un champ de recherche global
             if(!empty($filters['search'])){
                 $qb->andWhere('LOWER(p.name) LIKE LOWER(:searchTerm) OR LOWER(p.description) LIKE LOWER(:searchTerm)')
                     ->setParameter('searchTerm', '%'.$filters['search'].'%');
             }
 
-        //filtre par prix minimum
+        //filtre par prix minimum/maximum
         if (isset($filters['minPrice']) && is_numeric($filters['minPrice']))
         {
             $qb->andWhere('p.price >= :minPrice')
                 ->setParameter('minPrice',$filters['minPrice']);
         }
-        
         if(isset($filters['maxPrice']) && is_numeric($filters['maxPrice']))
         {
             $qb->andWhere('p.price <= :maxPrice')
                 ->setParameter('maxPrice', $filters['maxPrice']);
         }
+    }
 
+    public function findAllWithStock():array
+    {
+        $stockExpr = $this->getEntityManager()
+                            ->getRepository(StockMovement::class)
+                            ->getStockExpression('sm');
+
+        $qb = $this->createQueryBuilder('prod')
+            ->leftJoin(
+                StockMovement::class,
+                'sm',
+                'WITH',
+                'sm.product = prod'
+            )
+            ->select("prod.id, prod.name, $stockExpr as stock")
+                ->groupBy('prod.id')
+                ->setParameter('inType', StockMovementType::IN)
+                ->setParameter('outType', StockMovementType::OUT)
+                ->setParameter('adjType', StockMovementType::ADJUSTMENT)
+                ->getQuery();
+
+                return $qb->getArrayResult();
+    }
+
+    public function findOutOfStock():array
+    {
+        $stockExpr = $this->getEntityManager()
+                            ->getRepository(StockMovement::class)
+                            ->getStockExpression('sm');
+
+        $qb = $this->createQueryBuilder('prod')
+            ->leftJoin(
+                StockMovement::class,
+                'sm',
+                'WITH',
+                'sm.product = prod'
+            )
+            ->select("prod.id, prod.name, $stockExpr AS stock")
+                ->groupBy('prod.id')
+                ->having("$stockExpr <= 0")
+                ->setParameter('inType', StockMovementType::IN)
+                ->setParameter('outType', StockMovementType::OUT)
+                ->setParameter('adjType', StockMovementType::ADJUSTMENT)
+                ->getQuery();
+
+                return $qb->getArrayResult();
     }
 
 
-    //    /**
-    //     * @return Product[] Returns an array of Product objects
-    //     */
-    //    public function findByExampleField($value): array
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->orderBy('p.id', 'ASC')
-    //            ->setMaxResults(10)
-    //            ->getQuery()
-    //            ->getResult()
-    //        ;
-    //    }
+    //Methode pour récupérer le nombre de out of stock
+    public function CountOutOfStock():int
+    {
+        $stockExpr = $this->getEntityManager()
+                            ->getRepository(StockMovement::class)
+                            ->getStockExpression('sm');
 
-    //    public function findOneBySomeField($value): ?Product
-    //    {
-    //        return $this->createQueryBuilder('p')
-    //            ->andWhere('p.exampleField = :val')
-    //            ->setParameter('val', $value)
-    //            ->getQuery()
-    //            ->getOneOrNullResult()
-    //        ;
-    //    }
+        $qb = $this->createQueryBuilder('p')
+            ->select('COUNT(p.id)')
+            ->leftJoin(StockMovement::class, 'sm', 'WITH', 'sm.product = p')
+            ->groupBy('p.id')
+            ->having("$stockExpr <= 0")
+            ->setParameter('inType', StockMovementType::IN)
+            ->setParameter('outType', StockMovementType::OUT)
+            ->setParameter('adjType', StockMovementType::ADJUSTMENT);
+
+            return (int) $qb->getQuery()->getSingleScalarResult();
+            }
+
+    public function findLowStock():array
+    {
+
+        $stockExpr = $this->getEntityManager()
+                    ->getRepository(StockMovement::class)
+                    ->getStockExpression('sm'); 
+
+        $qb = $this->createQueryBuilder('p')
+            ->leftJoin(StockMovement::class,'sm','WITH','sm.product = p')
+            ->select('p.id, p.name, p.lowStockThreshold')
+            ->addSelect("$stockExpr AS stock")
+            ->groupBy('p.id')
+            ->having("$stockExpr <= p.lowStockThreshold")
+            ->setParameter('inType', StockMovementType::IN)
+            ->setParameter('outType', StockMovementType::OUT)
+            ->setParameter('adjType', StockMovementType::ADJUSTMENT)
+            ->getQuery();
+
+            return $qb->getArrayResult();
+    }
 }

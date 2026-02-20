@@ -10,9 +10,10 @@ use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use Doctrine\DBAL\Types\Types;
 use Symfony\Component\Serializer\Annotation\Groups;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '`user`')]
+#[ORM\Table(name: 'users')]
 #[ORM\UniqueConstraint(name: 'UNIQ_IDENTIFIER_EMAIL', fields: ['email'])]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
@@ -23,7 +24,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?int $id = null;
 
     #[ORM\Column(length: 180)]
-    #[Groups(['user:read'])]
+    #[Groups(['user:read', 'stock:read'])]
+    #[Assert\Email("Vérifier le format de l'email")]
     private ?string $email = null;
 
     /**
@@ -155,7 +157,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if (!$this->stockMovements->contains($stockMovement)) {
             $this->stockMovements->add($stockMovement);
-            $stockMovement->setUserId($this);
+            $stockMovement->setUser($this);
         }
 
         return $this;
@@ -165,8 +167,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         if ($this->stockMovements->removeElement($stockMovement)) {
             // set the owning side to null (unless already changed)
-            if ($stockMovement->getUserId() === $this) {
-                $stockMovement->setUserId(null);
+            if ($stockMovement->getUser() === $this) {
+                $stockMovement->setUser(null);
             }
         }
 

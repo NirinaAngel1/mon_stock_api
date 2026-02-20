@@ -4,6 +4,6 @@ namespace App\Enum;
 
 enum OrderType: string
 {
-    case PURCHASE = 'PURCHASE';
+    case PURCHASES = 'PURCHASES';
     case SALES = 'SALES';
 }

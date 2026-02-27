@@ -20,6 +20,7 @@ use Symfony\Component\Serializer\SerializerInterface;
 use App\Entity\Product;
 use App\Entity\OrderLine;
 use App\Security\Voter\OrderVoter;
+use Doctrine\DBAL\LockMode;
 
 #[Route('/api/orders')]
 final class OrderController extends AbstractController
@@ -131,6 +132,19 @@ final class OrderController extends AbstractController
         foreach($order->getOrderLines() as $line){
             $product = $line->getProduct();
             $qty = $line->getQuantity();
+
+            //LOCK le produit pour sécuriser la concurrence sur le stock
+            $this->entityManager->lock($line->getProduct(), LockMode::PESSIMISTIC_WRITE);
+
+             $available = $this->stockService->getCurrentStock($product);
+
+             if($available < $qty){
+                return new JsonResponse([
+                    'message'=>"Stock insuffisant pour {$product->getName()}",
+                    'available'=>$available,
+                    'required'=>$qty
+                ], 400);
+            }
 
             $available = $this->stockService->getCurrentStock($product);
 

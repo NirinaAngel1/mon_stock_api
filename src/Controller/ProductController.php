@@ -57,8 +57,6 @@ class ProductController extends AbstractController
 
     public function __construct(
         private readonly StockService $stockService,
-        private readonly ProductRepository $productRepository,
-        private readonly SerializerInterface $serializer
     )
     {}
 
@@ -210,6 +208,7 @@ class ProductController extends AbstractController
     public function show(Product $product, SerializerInterface $serializer): JsonResponse
     {
         $stock = $this->stockService->getCurrentStock($product);
+
         $product->setCurrentStock($stock);
 
         // $data = $serializer->serialize($product, 'json', ['groups' => 'product:read:item']);

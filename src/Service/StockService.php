@@ -42,7 +42,7 @@
                     ->setParameter('outType', StockMovementType::OUT)
                     ->setParameter('adjType', StockMovementType::ADJUSTMENT);
                 
-                    $result = $qb->getQuery()->setLockMode(\Doctrine\DBAL\LockMode::PESSIMISTIC_WRITE)->getSingleResult();
+                    $result = $qb->getQuery()->getSingleResult();
 
                     return (int)$result['stock'] ?? 0;
             }

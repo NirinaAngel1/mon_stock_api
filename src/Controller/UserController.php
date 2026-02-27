@@ -73,4 +73,21 @@ final class UserController extends AbstractController
         $em->flush();
         return new JsonResponse(null, Response::HTTP_NO_CONTENT);
     }
+
+    #[Route('/me', name:'app_user_me', methods: ['GET'])]
+    #[IsGranted('IS_AUTHENTICATED_FULLY', message:'Vous devez être authentifié pour accéder à cette ressource.')]
+    public function me():JsonResponse
+    {
+        $user = $this->getUser();
+
+        if(!$user){
+            return new JsonResponse(['message'=>'Utilisateur non authentifié.'], Response::HTTP_UNAUTHORIZED);
+        }
+
+        return new JsonResponse([
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles(),
+            'username' => $user->getUsername() ?? 'Inconnu'
+        ], Response::HTTP_OK);
+    }
 }

@@ -53,7 +53,7 @@ class UserFixtures extends Fixture
 
         $hashedPassword = $this->passwordHasher->hashPassword(
             $user3,
-            'mdp_staff'
+            'mdp_user'
         );
         $user3->setPassword($hashedPassword);
         $this->addReference(self::SIMPLE_USER_REFERENCE, $user3);

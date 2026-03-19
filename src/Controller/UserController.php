@@ -87,7 +87,7 @@ final class UserController extends AbstractController
         return new JsonResponse([
             'email' => $user->getEmail(),
             'roles' => $user->getRoles(),
-            'username' => $user->getUsername() ?? 'Inconnu'
+            'username' => $user->getUsername()
         ], Response::HTTP_OK);
     }
 }

@@ -88,4 +88,52 @@ class StockMovementRepository extends ServiceEntityRepository
 
             return (int) $result?: 0;
     }
+
+    public function getMonthlyMovements(): array
+    {
+        //récupération des mouvements de l'année en cours
+        $qb = $this->createQueryBuilder('sm')
+            ->where('sm.date >= :start')
+            ->andWhere('sm.date <= :end')
+            ->setParameter('start', new \DateTime(date('Y-01-01 00:00:00')))
+            ->setParameter('end', new \DateTime(date('Y-12-31 23:59:59')))
+            ->getQuery()
+            ->getResult();
+
+            $months = [
+                1 => 'Janvier',
+                2 => 'Février',
+                3 => 'Mars',
+                4 => 'Avril',
+                5 => 'Mai',
+                6 => 'Juin',
+                7 => 'Juillet',
+                8 => 'Aout',
+                9 => 'Septembre',
+                10 => 'Octobre',
+                11 => 'Novembre',
+                12 => 'Decembre'
+             ];
+
+             //initialisation du tableau avec 0 pour chaque mois
+             $statsByMonth = array_fill(1, 12, 0);
+
+             foreach ($qb as $movement){
+                $monthIndex = (int)$movement->getDate()->format('m');
+                $statsByMonth[$monthIndex]++;
+             }
+
+             $labels = [];
+             $data = [];
+
+             foreach($statsByMonth as $index => $count){
+                $labels[]=$months[$index];
+                $data[]=$count;
+             }
+
+            return [
+                'labels' => $labels,
+                'data' => $data
+            ];
+    }
 }

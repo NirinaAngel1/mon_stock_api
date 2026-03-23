@@ -17,6 +17,40 @@ final class DashboardController extends AbstractController
         private readonly StockService $stockService)
     {}
 
+    #[Route("", name:"index", methods:["GET"])]
+     public function dashboard(StockMovementRepository $stockMovementRepository): JsonResponse
+    {
+        $totalProducts = $this->productRepository->count([]);
+        $outOfStock = $this->productRepository->findOutOfStock();
+        $lowStock = $this->productRepository->findLowStock();
+        $lastMovements = $this->stockService->getLastMovementGlobal(5);
+
+        return $this->json([
+            'summary'=>[
+            'totalProducts' => $totalProducts,
+            'outOfStock' => count($outOfStock),
+            'lowStock' => count($lowStock),
+            ],
+            'lastMovements' => $lastMovements
+        ]);
+    }
+
+    #[Route("/criticals-products", name:"critical_products", methods:["GET"])]
+    public function criticalProducts(): JsonResponse
+    {
+        $products = $this->productRepository->findLowStock();
+        return $this->json($products);
+         
+    }
+
+    #[Route("/stats/monthly", name:"monthly_stats", methods:["GET"])]
+    public function monthlyStats(StockMovementRepository $stockMovementRepository): JsonResponse
+    {
+        $stats = $stockMovementRepository->getMonthlyMovements();
+
+        return $this->json($stats);
+    }
+
     #[Route('/stock',name: 'stock', methods:['GET'])]
     public function index(
         StockMovementRepository $stockMovement,

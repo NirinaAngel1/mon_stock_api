@@ -66,6 +66,7 @@ class Product
     private ?int $currentStock = null;
 
     #[ORM\Column(type:'integer')]
+    #[Groups(['product:read', 'product:write'])]
     private int $lowStockThreshold = 5;
 
     public function __construct()

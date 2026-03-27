@@ -71,7 +71,7 @@ class ProductController extends AbstractController
         $page = $request->query->getInt('page', 1);
         $limit = $request->query->getInt('limit', 10);
         $categoryId = $request->query->getInt('category_id');
-        $search = $request->query->get('search');
+        $search = $request->query->get('q');
         $name = $request->query->get('name');
         $minPrice = $request->query->get('min_price');
         $maxPrice = $request->query->get('max_price');
@@ -95,11 +95,11 @@ class ProductController extends AbstractController
 
         $responseArray = [
             'metadata' => [
-                'total_items' => $totalItems,
-                'total_pages' => (int)$totalPages,
-                'current_page' => $page,
+                'totalItems' => $totalItems,
+                'totalPages' => (int)$totalPages,
+                'currentPage' => $page,
                 'limit' => $limit,
-                'filtered_by_category_id' => $categoryId,
+                'filteredByCategoryId' => $categoryId,
             ],
             'data' => json_decode($serializer->serialize($products, 'json', ['groups' => 'product:read']), true)
         ];

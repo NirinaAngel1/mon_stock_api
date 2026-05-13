@@ -27,11 +27,12 @@ class OrderLine
     private ?string $unitPrice = null;
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
+    #[Groups(['order:read'])]
     private ?Order $order_id = null;
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
     #[Groups(['order:read'])]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     private ?Product $product_id = null;
 
     /**

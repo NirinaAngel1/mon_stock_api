@@ -52,14 +52,15 @@ class Product
     /**
      * @var Collection<int, StockMovement>
      */
-    #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'product')]
+    #[ORM\OneToMany(targetEntity: StockMovement::class, mappedBy: 'product', cascade:['remove'], orphanRemoval:true)]
     #[Groups(['product:read:item'])]
     private Collection $stockMovements;
 
     /**
      * @var Collection<int, OrderLine>
      */
-    #[ORM\OneToMany(targetEntity: OrderLine::class, mappedBy: 'product_id')]
+    #[ORM\OneToMany(targetEntity: OrderLine::class, mappedBy: 'product_id', cascade:['remove'], orphanRemoval:true)]
+    #[Groups(['product:read:item'])]
     private Collection $orderLines;
 
     #[Groups(['product:read', 'category:read_products'])]

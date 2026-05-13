@@ -28,7 +28,7 @@ class StockMovement
     private ?string $reason = null;
 
     #[ORM\ManyToOne(inversedBy: 'stockMovements')]
-    #[ORM\JoinColumn(nullable: false)]
+    #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
     #[Groups(['read:product:item', 'stock:read'])]
     private ?Product $product = null;
 

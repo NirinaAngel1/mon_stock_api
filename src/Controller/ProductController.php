@@ -213,9 +213,6 @@ class ProductController extends AbstractController
 
         // $data = $serializer->serialize($product, 'json', ['groups' => 'product:read:item']);
         return $this->json($product, Response::HTTP_OK,[], ['groups' => 'product:read:item']);
-        // dump($data);
-        // die();
-        // return new JsonResponse($data, Response::HTTP_OK, [], true);
     }
 
     #[Route('/{id}', name: 'product_update', methods: ['PUT'])]

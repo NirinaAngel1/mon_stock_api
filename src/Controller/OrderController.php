@@ -136,16 +136,15 @@ final class OrderController extends AbstractController
             //LOCK le produit pour sécuriser la concurrence sur le stock
             $this->entityManager->lock($line->getProduct(), LockMode::PESSIMISTIC_WRITE);
 
-             $available = $this->stockService->getCurrentStock($product);
+            //  $available = $this->stockService->getCurrentStock($product);
 
-             if($available < $qty){
-                return new JsonResponse([
-                    'message'=>"Stock insuffisant pour {$product->getName()}",
-                    'available'=>$available,
-                    'required'=>$qty
-                ], 400);
-            }
-
+            //  if($available < $qty){
+            //     return new JsonResponse([
+            //         'message'=>"Stock insuffisant pour {$product->getName()}",
+            //         'available'=>$available,
+            //         'required'=>$qty
+            //     ], 400);
+            // }
             $available = $this->stockService->getCurrentStock($product);
 
                 if($available < $qty){
@@ -229,7 +228,7 @@ final class OrderController extends AbstractController
         $order->setType($orderType);
         $order->setStatus(OrderStatus::DRAFT);
         $order->setDate(new \DateTimeImmutable());
-        $order->setUserId($this->getUser());
+        $order->setUser($this->getUser());
         $order->setReference("COM-".date('Ymd-His').'-'.random_int(001, 999));
 
         $totalAmount = 0;

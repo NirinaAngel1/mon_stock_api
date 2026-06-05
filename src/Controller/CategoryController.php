@@ -135,6 +135,10 @@ final class CategoryController extends AbstractController
                     return new JsonResponse(['message' => 'Catégorie non trouvée.'], Response::HTTP_NOT_FOUND);
                 }
 
+                if(count($category->getProducts()) > 0) {
+                    return new JsonResponse(['message' => 'Impossible de supprimer une catégorie qui contient des produits.'], Response::HTTP_BAD_REQUEST);
+                }
+
                 $entityManager->remove($category);
                 $entityManager->flush();
 

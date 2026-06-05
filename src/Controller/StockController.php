@@ -6,9 +6,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Product;
+use App\Enum\StockMovementType;
 use App\Repository\ProductRepository;
 use App\Repository\StockMovementRepository;
 use App\Service\StockService;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -71,5 +73,46 @@ final class StockController extends AbstractController
         $movements = $repo->findByProduct($product, 20);
         
         return $this->json($movements, Response::HTTP_OK,[], ['groups'=>['read:product:item']]);
+    }
+
+    #[Route('/adjust', name:'app_stock_adjust', methods:['POST'])]
+    public function adjustStock(
+        Request $request,
+        ProductRepository $productRepository,
+        EntityManagerInterface $entityManager):JsonResponse
+    {
+        $data = json_decode($request->getContent(), true);
+
+        $product = $productRepository->find($data['productId'] ?? 0);
+
+        if(!$product){
+            return new JsonResponse([
+                'status'=>'error',
+                'message'=>'Produit introuvable ou inexistant'
+            ], 404);
+        }
+
+        try{
+            $this->stockService->createAdjustmentMovement(
+                $product,
+                (int) $data['quantity'],
+                StockMovementType::from($data['type']),
+                $data['reason'] ?? 'Ajustement de stock',
+                $this->getUser() // Assurez-vous que l'utilisateur est connecté et que getUser() retourne un objet User valide
+            );
+
+            $entityManager->flush();
+
+            return new JsonResponse([
+                'status'=>'success',
+                'message'=>'Stock ajusté avec succès',
+                'newStock'=>$this->stockService->getCurrentStock($product)
+            ], 200);
+        }catch(\Exception $e){
+            return new JsonResponse([
+                'status'=>'error',
+                'message'=>$e->getMessage()
+            ], 400);
+        }
     }
 }

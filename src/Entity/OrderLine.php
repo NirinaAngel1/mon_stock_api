@@ -28,12 +28,12 @@ class OrderLine
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
     #[Groups(['order:read'])]
-    private ?Order $order_id = null;
+    private ?Order $order = null;
 
     #[ORM\ManyToOne(inversedBy: 'orderLines')]
     #[Groups(['order:read'])]
     #[ORM\JoinColumn(nullable: false, onDelete: 'CASCADE')]
-    private ?Product $product_id = null;
+    private ?Product $product = null;
 
     /**
      * @var Collection<int, StockMovement>
@@ -77,24 +77,24 @@ class OrderLine
 
     public function getOrder(): ?Order
     {
-        return $this->order_id;
+        return $this->order;
     }
 
-    public function setOrder(?Order $order_id): static
+    public function setOrder(?Order $order): static
     {
-        $this->order_id = $order_id;
+        $this->order = $order;
 
         return $this;
     }
 
     public function getProduct(): ?Product
     {
-        return $this->product_id;
+        return $this->product;
     }
 
-    public function setProduct(?Product $product_id): static
+    public function setProduct(?Product $product): static
     {
-        $this->product_id = $product_id;
+        $this->product = $product;
 
         return $this;
     }

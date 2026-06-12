@@ -8,9 +8,7 @@
         use App\Entity\StockMovement;
         use App\Entity\User;
         use App\Entity\OrderLine;
-        use App\Entity\Order;
         use App\Enum\StockMovementType;
-        use DateTimeImmutable;
         use InvalidArgumentException;
 
         class StockService
@@ -154,10 +152,7 @@
 
                 $this->entityManager->persist($movement);
 
-                // Nous ne faisons pas de flush ici car le OrderController va tout flusher en bloc.
-                // C'est souvent mieux de gérer les transactions au niveau du Controller/Service appelant.
-                // Pour l'instant, laissons le flush pour le MVP simple, mais gardez cette note en tête.
-                $this->entityManager->flush();
+                
 
                 return $movement;
             }

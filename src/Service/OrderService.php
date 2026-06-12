@@ -6,7 +6,6 @@ use App\Entity\Order;
 use App\Entity\User;
 use App\Enum\StockMovementType;
 use Doctrine\ORM\EntityManagerInterface;
-use App\Service\StockService;
 use App\Enum\OrderStatus;
 use App\Enum\OrderType;
 
@@ -25,7 +24,7 @@ class OrderService
     {
         return match($order->getType()){
             OrderType::SALES => StockMovementType::OUT,
-            OrderType::PURCHASE => StockMovementType::IN,
+            OrderType::PURCHASES => StockMovementType::IN,
         };
     }
 
@@ -44,12 +43,12 @@ class OrderService
             }
 
             foreach($order->getOrderLines() as $lines ){
-                $product = $lines->getProductId();
+                $product = $lines->getProduct();
                 $stock = $this->stockService->getCurrentStock($product);
 
                 if($movementType === StockMovementType::OUT && $stock < $lines->getQuantity()){
                     throw new \LogicException(
-                    sprintf('Stock insuffisant pour le produit %s', $lines->getProductId()->getName())
+                    sprintf('Stock insuffisant pour le produit %s', $lines->getProduct()->getName())
                 );
                 }
 

@@ -14,6 +14,7 @@ use App\Enum\StockMovementType;
 use App\Repository\OrderRepository;
 use App\Service\StockService;
 use Doctrine\ORM\EntityManagerInterface;
+use App\Service\OrderService;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\Serializer\SerializerInterface;
@@ -26,7 +27,7 @@ use Doctrine\DBAL\LockMode;
 final class OrderController extends AbstractController
 {
     public function __construct(
-        // private readonly OrderService $orderService,
+        private readonly OrderService $orderService,
         private readonly StockService $stockService,
         private readonly EntityManagerInterface $entityManager,
         private readonly SerializerInterface $serializer
@@ -42,7 +43,7 @@ final class OrderController extends AbstractController
             $orders = $orderRepository->findAll();
         }else{
         $orders = $orderRepository->findBy([
-            'userId' => $this->getUser()
+            'user' => $this->getUser()
         ]);
         }
 
@@ -111,74 +112,25 @@ final class OrderController extends AbstractController
 
         $this->denyAccessUnlessGranted(OrderVoter::VALIDATE, $order);
 
-        if(in_array($order->getStatus(),[
-            OrderStatus::CANCELLED,
-            OrderStatus::COMPLETED
-        ])){
+        try{
+            $this->orderService->validateOrder($order, $this->getUser(), $this->entityManager);
+
+            return new JsonResponse([
+                'status'=>'success',
+                'message'=>"Commande validé et stock mis à jour"
+            ]);
+        }catch(\LogicException|\DomainException $e){
             return new JsonResponse([
                 'status'=>'error',
-                'message'=>"Commande déjà finalisée ou annulée"
+                'message'=>$e->getMessage()
             ], 400);
         }
-
-        if ($order->getStatus() !== OrderStatus::PENDING){
+        catch(\Throwable $e){
             return new JsonResponse([
                 'status'=>'error',
-                "message"=>"Seules les commandes en attente peuvent être validées"
-            ], 400);
+                'message'=>"Une erreur est survenue lors de la validation de la commande"
+            ], 500);
         }
-
-        if($order->getType()===OrderType::SALES){
-        foreach($order->getOrderLines() as $line){
-            $product = $line->getProduct();
-            $qty = $line->getQuantity();
-
-            //LOCK le produit pour sécuriser la concurrence sur le stock
-            $this->entityManager->lock($line->getProduct(), LockMode::PESSIMISTIC_WRITE);
-
-            //  $available = $this->stockService->getCurrentStock($product);
-
-            //  if($available < $qty){
-            //     return new JsonResponse([
-            //         'message'=>"Stock insuffisant pour {$product->getName()}",
-            //         'available'=>$available,
-            //         'required'=>$qty
-            //     ], 400);
-            // }
-            $available = $this->stockService->getCurrentStock($product);
-
-                if($available < $qty){
-                    return new JsonResponse([
-                        'message'=>"Stock insuffisant pour {$product->getName()}",
-                        'available'=>$available,
-                        'required'=>$qty
-                    ], 400);
-                }
-            }
-        }
-
-        foreach($order->getOrderLines() as $line){
-            $movementType = $order->getType() === OrderType::SALES
-            ? StockMovementType::OUT
-            : StockMovementType::IN;
-
-            try{
-                $this->stockService->createOrderMovement(
-                    $line,
-                    $movementType,
-                    $this->getUser()
-                );
-            }catch(\DomainException $e){
-                return $this->json(['error'=> $e->getMessage()], 400);
-            }   
-        }
-        $order->setStatus(OrderStatus::COMPLETED);
-        $this->entityManager->flush();
-
-        return new JsonResponse([
-            'status'=>'success',
-            'message'=>"Commande validé et stock mis à jour"
-        ]);
     }
 
     #[Route(name:'app_create_order', methods:['POST'])]

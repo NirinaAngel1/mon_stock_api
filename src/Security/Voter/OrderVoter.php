@@ -40,7 +40,7 @@ final class OrderVoter extends Voter
 
         $order = $subject;
 
-        if($order->getUserId() === $user){
+        if($order->getUser() === $user){
             return true;
         }
 
